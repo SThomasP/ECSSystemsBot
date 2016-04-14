@@ -12,5 +12,5 @@ aTokenS=temp[1]
 auth = tweepy.OAuthHandler(cToken, cTokenS)
 auth.set_access_token(aToken, aTokenS)
 api = tweepy.API(auth)
-api.update_status('Testing out the python code, after this I can start automation')
+api.update_status('Testing out twitter emoji :stuck_out_tongue_winking_eye: ')
 #ITS ALIVE
