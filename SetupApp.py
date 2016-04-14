@@ -1,7 +1,7 @@
 import tweepy, time, sys
 filename=open('ConsumerTokens','r')
-cToken = filename.readline().splitlines()
-cTokenS = filename.readline().splitlines()
+temp = filename.read().splitlines()
+cToken=temp.
 auth = tweepy.OAuthHandler(cToken,cTokenS)
 try:
     redirect_url = auth.get_authorization_url()
