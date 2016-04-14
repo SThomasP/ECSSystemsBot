@@ -1,18 +1,4 @@
 from urllib.request import urlopen
-
-def ComposeTweet(service, machine, problem):
-    if service=='Machine':
-        issue='Machine '
-    else:
-        issue='Service '+service+' on '
-    issue=issue+machine;
-    if problem=='DOWN':
-        issue=issue+' has gone down.'
-    elif problem=='ERROR':
-        issue=issue+' has an error, see status page for more detail.'
-    print(issue)
-    return issue
-
 for line in urlopen('https://secure.ecs.soton.ac.uk/status/'):
     line = line.decode('utf-8')  # Decoding the binary data to text.
     if 'Core Priority Devices' in line:  #look for 'Core Priority Devices' To find the line of text with the list of issues
@@ -32,6 +18,6 @@ for f in linesIWant:
             service=f.split('<td>')[1].split('</td>')[0]
             problem=f.split('<td>')[2].split('</td>')[0]
             issues.append(service+','+machineName+','+problem+'\n')
-logfile=open('log0.txt','w')
+logfile=open('newlog.txt','w')
 logfile.writelines(issues)
 logfile.close()
