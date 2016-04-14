@@ -16,7 +16,7 @@ def ComposeTweet(service, machine, problem):
 for line in urlopen('https://secure.ecs.soton.ac.uk/status/'):
     line = line.decode('utf-8')  # Decoding the binary data to text.
     if 'Core Priority Devices' in line:  #look for 'Core Priority Devices' To find the line of text with the list of issues
-        linesIWant = line.split('Priority Devices')[2].split("</tr>")
+        linesIWant = line.split('Priority Devices')[2].split("<tr")
         linesIWant.pop()
         linesIWant.pop(0)
 for f in linesIWant:
@@ -31,4 +31,3 @@ for f in linesIWant:
             service=f.split('<td>')[1].split('</td>')[0]
             problem=f.split('<td>')[2].split('</td>')[0]
             ComposeTweet(service,machineName,problem)
-
