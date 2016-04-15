@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import tweepy, time, sys, urllib.request, requests
 
 def getIssues():
@@ -77,8 +80,36 @@ def tweet(api, theTweet):
     api.update_status(theTweet)
     
 def checkPageUp():
+    #users the requests library to check if the page is up
     resp=requests.head('https://secure.ecs.soton.ac.uk/status/')
+    #if the page is up the status code is 200, if the page is down its 404
     return resp.status_code==200
+
+def connectToTwitter():
+    #open the file containing the consumer tokens
+    TokensFile=open('ConsumerTokens','r')
+    temp = TokensFile.read().splitlines()
+    TokensFile.close()
+    #store the consumer tokens in their variables
+    cToken=temp[0]
+    cTokenS=temp[1]
+    #does the same now with the access tokens
+    TokensFile=open('AccessTokens','r')
+    temp = TokensFile.read().splitlines()
+    TokensFile.close()
+    aToken=temp[0]
+    aTokenS=temp[1]
+    #sets up the auth variable
+    auth = tweepy.OAuthHandler(cToken, cTokenS)
+    #does the same with the access tokens
+    auth.set_access_token(aToken, aTokenS)
+    return auth
+
+auth=connectToTwitter()
+while true:
+    
+    time.sleep(1800)
+
     
 
     
