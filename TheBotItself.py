@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import tweepy, time, sys, urllib.request, requests
+import tweepy, time, sys, urllib.request, requests, datetime
 
 def getIssues():
     #opens up the status page
     for line in urllib.request.urlopen('https://secure.ecs.soton.ac.uk/status/'):
         line = line.decode('utf-8')  # Decoding the binary data to text.
         if 'Core Priority Devices' in line:  #look for 'Core Priority Devices' To find the line of text with the list of issues
+            #split the text for different priorities, 1 for core, 2 for standard 
             linesIWant = line.split('Priority Devices')[1].split("<tr")
             #pops the top and bottom line as these are useless
             linesIWant.pop()
@@ -40,6 +41,18 @@ def intersection(a,b):
 def union(a,b):
     #returns the union of two lists
     return list(set(a) | set(b))
+
+def addToLog(logdata):
+    #create the text to be logged, the tweet followed by the time it was tweeted
+    tobelogged='{'+logdata+'}'+datetime.datetime.now()
+    #open the log file in append mode
+    logfile=open('LogFile.txt','a')
+    #write the log to the log file, with a new line character
+    logfile.write(tobelogged+'\n')
+    #close the log file
+    logfile.close()
+    #print the log data
+    print(tobelogged)
 
 def statusPageTweet(down):
     #if page is down, down==0, if not down==1
@@ -80,7 +93,9 @@ def ComposeTweet(service, machine, problem, fixed):
 def tweet(api, theTweet):
     #print(theTweet)
     api.update_status(theTweet)
-    #wait 30 seconds between tweets
+    #log the tweet
+    addToLog(theTweet)
+    #waits 60 seconds between tweets
     time.sleep(60)
     
 def checkPageUp():
@@ -111,28 +126,33 @@ def connectToTwitter():
     return api
 
 api=connectToTwitter()
+#sets up the connection to twitter
 loggedIssues=[]
 siteDown=False
+#defaults the logged issues and if the page is down
 while True:
     siteNowDown=checkPageUp()
+    #if the site has gone down since the last scan, or if it has come back up
     if not siteDown==siteNowDown:
         if siteNowDown:
             tweet(api,statusPageTweet(0))
         else:
             tweet(api,statusPageTweet(1))
-        siteDown==siteNowDown
+        siteDown=siteNowDown
     if not siteDown:
         issues=getIssues()
         theUnion=union(loggedIssues,issues)
         theIntersection=intersection(loggedIssues,issues)
         for f in theUnion:
-            print(f)
             problem=f.split(',')
             if ((f in loggedIssues) and (not f in theIntersection)):
+                #tweet that the problem has arisen 
                 tweet(api,ComposeTweet(problem[0],problem[1],problem[2],0))
             elif ((f in issues) and (not f in theIntersection)):
+                #tweet that the problem has been fixed
                 tweet(api,ComposeTweet(problem[0],problem[1],problem[2],1))
-        loggedIssues=issues
+            loggedIssues=issues
+    #sleep for 30 minutes before running the script again 
     time.sleep(1800)
 
     
