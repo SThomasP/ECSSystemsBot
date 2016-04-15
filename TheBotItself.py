@@ -1,7 +1,8 @@
-def getWebPage():
-    from urllib.request import urlopen
+import tweepy, time, sys, urllib.request, requests
+
+def getIssues():
     #opens up the status page
-    for line in urlopen('https://secure.ecs.soton.ac.uk/status/'):
+    for line in urllib.request.urlopen('https://secure.ecs.soton.ac.uk/status/'):
         line = line.decode('utf-8')  # Decoding the binary data to text.
         if 'Core Priority Devices' in line:  #look for 'Core Priority Devices' To find the line of text with the list of issues
             linesIWant = line.split('Priority Devices')[2].split("<tr")
@@ -37,6 +38,12 @@ def union(a,b):
     #returns the union of two lists
     return list(set(a) | set(b))
 
+def statusPageTweet(down):
+    if down==0:
+        returnTweet='Status Page unaccessable, secure.ecs is most likley down.'
+    elif down==0:
+        returnTweet='Can access status page again, will tweet soon about any new developments.'
+
 def ComposeTweet(service, machine, problem, fixed):
     #writes the tweets themselves based on a very formualic
     if fixed==1:
@@ -51,6 +58,7 @@ def ComposeTweet(service, machine, problem, fixed):
         elif problem=='ERROR':
             issue=issue+' has an error, see status page for more detail.\U0001F63F'
             #\U0001F63F is the crying cat face emoji
+    #fixed = 0 means the issue has been fixed
     elif fixed==0:
         if service=='Machine':
             issue='Machine '
@@ -65,8 +73,12 @@ def ComposeTweet(service, machine, problem, fixed):
     #returns the completed tweet
     return issue
 
-def tweet(API, theTweet):
-    #sends the tweet to the twitter API
-    API.update_status(theTweet)
+def tweet(api, theTweet):
+    api.update_status(theTweet)
+    
+def checkPageUp():
+    resp=requests.head('https://secure.ecs.soton.ac.uk/status/')
+    return resp.status_code==200
+    
 
-
+    
