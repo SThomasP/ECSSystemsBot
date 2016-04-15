@@ -8,7 +8,7 @@ def getIssues():
     for line in urllib.request.urlopen('https://secure.ecs.soton.ac.uk/status/'):
         line = line.decode('utf-8')  # Decoding the binary data to text.
         if 'Core Priority Devices' in line:  #look for 'Core Priority Devices' To find the line of text with the list of issues
-            linesIWant = line.split('Priority Devices')[2].split("<tr")
+            linesIWant = line.split('Priority Devices')[1].split("<tr")
             #pops the top and bottom line as these are useless
             linesIWant.pop()
             linesIWant.pop(0)
@@ -25,12 +25,12 @@ def getIssues():
                     service=f.split('<td>')[2].split('</td>')[0]
                     problem=f.split('<td>')[3].split('</td>')[0]
                     #add the issue to the list
-                    issues.append(service+','+machineName+','+problem+'\n')
+                    issues.append(service+','+machineName+','+problem)
             elif 'state_2' in f:
                 #if its not a machine but has an issue log get the service name, and problem type, the machine will be the last machine to be iterated through
                 service=f.split('<td>')[1].split('</td>')[0]
                 problem=f.split('<td>')[2].split('</td>')[0]
-                issues.append(service+','+machineName+','+problem+'\n')
+                issues.append(service+','+machineName+','+problem)
     return issues
 
 def intersection(a,b):
@@ -42,6 +42,7 @@ def union(a,b):
     return list(set(a) | set(b))
 
 def statusPageTweet(down):
+    #if page is down, down==0, if not down==1
     if down==0:
         returnTweet='Status Page unaccessable, secure.ecs is most likley down.'
     elif down==0:
@@ -77,13 +78,16 @@ def ComposeTweet(service, machine, problem, fixed):
     return issue
 
 def tweet(api, theTweet):
+    #print(theTweet)
     api.update_status(theTweet)
+    #wait 30 seconds between tweets
+    time.sleep(60)
     
 def checkPageUp():
     #users the requests library to check if the page is up
     resp=requests.head('https://secure.ecs.soton.ac.uk/status/')
     #if the page is up the status code is 200, if the page is down its 404
-    return resp.status_code==200
+    return not(resp.status_code==200)
 
 def connectToTwitter():
     #open the file containing the consumer tokens
@@ -103,11 +107,32 @@ def connectToTwitter():
     auth = tweepy.OAuthHandler(cToken, cTokenS)
     #does the same with the access tokens
     auth.set_access_token(aToken, aTokenS)
-    return auth
+    api=tweepy.API(auth)
+    return api
 
-auth=connectToTwitter()
-while true:
-    
+api=connectToTwitter()
+loggedIssues=[]
+siteDown=False
+while True:
+    siteNowDown=checkPageUp()
+    if not siteDown==siteNowDown:
+        if siteNowDown:
+            tweet(api,statusPageTweet(0))
+        else:
+            tweet(api,statusPageTweet(1))
+        siteDown==siteNowDown
+    if not siteDown:
+        issues=getIssues()
+        theUnion=union(loggedIssues,issues)
+        theIntersection=intersection(loggedIssues,issues)
+        for f in theUnion:
+            print(f)
+            problem=f.split(',')
+            if ((f in loggedIssues) and (not f in theIntersection)):
+                tweet(api,ComposeTweet(problem[0],problem[1],problem[2],0))
+            elif ((f in issues) and (not f in theIntersection)):
+                tweet(api,ComposeTweet(problem[0],problem[1],problem[2],1))
+        loggedIssues=issues
     time.sleep(1800)
 
     
