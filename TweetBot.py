@@ -10,14 +10,10 @@ def getIssues():
         if 'Core Priority Devices' in line:  #look for 'Core Priority Devices' To find the line of text with the list of issues
             #split the text for different priorities, 1 for core, 2 for standard, then split by table rows
             linesIWant = line.split('Priority Devices')[1].split("<tr")
-            #linesIWant2 = line.split('Priority Devices')[2].split("<tr")
             #pops the top and bottom line as these are useless
             linesIWant.pop()
             linesIWant.pop(0)
-            #linesIWant2.pop()
-            #linesIWant2.pop(0)
             #combines the two lists of lines
-           # linesIWant.extend(linesIWant2)
             issues=[]
     for f in linesIWant:
         #if its not one of the border cells analyse the code
