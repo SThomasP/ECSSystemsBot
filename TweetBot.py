@@ -8,11 +8,16 @@ def getIssues():
     for line in urllib.request.urlopen('https://secure.ecs.soton.ac.uk/status/'):
         line = line.decode('utf-8')  # Decoding the binary data to text.
         if 'Core Priority Devices' in line:  #look for 'Core Priority Devices' To find the line of text with the list of issues
-            #split the text for different priorities, 1 for core, 2 for standard 
+            #split the text for different priorities, 1 for core, 2 for standard, then split by table rows
             linesIWant = line.split('Priority Devices')[1].split("<tr")
+            linesIWant2 = line.split('Priority Devices')[2].split("<tr")
             #pops the top and bottom line as these are useless
             linesIWant.pop()
             linesIWant.pop(0)
+            linesIWant2.pop()
+            linesIWant2.pop(0)
+            #combines the two lists of lines
+            linesIWant.extend(linesIWant2)
             issues=[]
     for f in linesIWant:
         #if its not one of the border cells analyse the code
@@ -42,11 +47,11 @@ def union(a,b):
     #returns the union of two lists
     return list(set(a) | set(b))
 
-def addToLog(logdata):
+def addToTweetLog(logdata):
     #create the text to be logged, the tweet followed by the time it was tweeted
-    tobelogged='{'+logdata+'}'+datetime.datetime.now()
+    tobelogged='{'+logdata+'}'+str(datetime.datetime.now())
     #open the log file in append mode
-    logfile=open('LogFile.txt','a')
+    logfile=open('TweetLog.txt','a')
     #write the log to the log file, with a new line character
     logfile.write(tobelogged+'\n')
     #close the log file
@@ -57,9 +62,11 @@ def addToLog(logdata):
 def statusPageTweet(down):
     #if page is down, down==0, if not down==1
     if down==0:
-        returnTweet='Status Page unaccessable, secure.ecs is most likley down.'
+        returnTweet='Status Page unaccessable, secure.ecs is most likley down.\U0001F63F'
+        #\U0001F63F is the crying cat face emoji
     elif down==0:
-        returnTweet='Can access status page again, will tweet soon about any new developments.'
+        returnTweet='Can access status page again, will tweet soon about any new developments.\U0001F638'
+        #\U0001F638 is the grinning cat face emoji
 
 def ComposeTweet(service, machine, problem, fixed):
     #writes the tweets themselves based on a very formualic
@@ -71,10 +78,9 @@ def ComposeTweet(service, machine, problem, fixed):
             issue='Service '+service+' on '
         issue=issue+machine;
         if problem=='DOWN':
-            issue=issue+' has gone down.\U0001F63F'
+            issue=issue+' has gone down.'
         elif problem=='ERROR':
-            issue=issue+' has an error, see status page for more detail.\U0001F63F'
-            #\U0001F63F is the crying cat face emoji
+            issue=issue+' has an error, see status page for more detail.'
     #fixed = 0 means the issue has been fixed
     elif fixed==0:
         if service=='Machine':
@@ -83,20 +89,18 @@ def ComposeTweet(service, machine, problem, fixed):
             issue='Service '+service+' on '
         issue=issue+machine;
         if problem=='DOWN':
-            issue=issue+' is now back up.\U0001F638'
+            issue=issue+' is now back up.'
         elif problem=='ERROR':
-            issue=issue+' is now error free.\U0001F638'
-            #\U0001F638 is the grinning cat face emoji
+            issue=issue+' is now error free.'
     #returns the completed tweet
     return issue
 
 def tweet(api, theTweet):
-    #print(theTweet)
     api.update_status(theTweet)
     #log the tweet
-    addToLog(theTweet)
-    #waits 60 seconds between tweets
-    time.sleep(60)
+    addToTweetLog(theTweet)
+    #waits 30 seconds after tweeting
+    time.sleep(30)
     
 def checkPageUp():
     #users the requests library to check if the page is up
@@ -125,18 +129,33 @@ def connectToTwitter():
     api=tweepy.API(auth)
     return api
 
+def getIssueLog():
+    logFile=open('IssueLog.txt','r')
+    issues=logFile.read().splitlines()
+    logFile.close()
+
+def saveToLog(issues):
+    logFile=open('IssueLog.txt','w')
+    for f in issues:
+        logFile.write(f+'\n')
+    logFile.close()
+
 api=connectToTwitter()
 #sets up the connection to twitter
-loggedIssues=[]
+loggedIssues=getIssueLog()
+#loads the issue log from the previous sessions
 siteDown=False
 #defaults the logged issues and if the page is down
 while True:
+    #iterate forever
     siteNowDown=checkPageUp()
     #if the site has gone down since the last scan, or if it has come back up
     if not siteDown==siteNowDown:
+        #if the site has gone down, tweet about it
         if siteNowDown:
             tweet(api,statusPageTweet(0))
         else:
+        #if the site has come back up, tweet about it
             tweet(api,statusPageTweet(1))
         siteDown=siteNowDown
     if not siteDown:
@@ -151,7 +170,8 @@ while True:
             elif ((f in issues) and (not f in theIntersection)):
                 #tweet that the problem has been fixed
                 tweet(api,ComposeTweet(problem[0],problem[1],problem[2],1))
-            loggedIssues=issues
+        loggedIssues=issues
+        saveToLog(loggedIssues)
     #sleep for 30 minutes before running the script again 
     time.sleep(1800)
 
